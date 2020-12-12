@@ -30,6 +30,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+/// [SDS](https://github.com/antirez/sds)，Simple Dynamic String，是为了增强有限的 libc 字符串处理函数，以满足以下目标：
+/// * 简单易用
+/// * 二进制数据安全
+/// * 性能优秀
+/// * 兼容 C 函数接口
+///
+/// 为达成上述目标，SDS 在返回给用户的指针前存储了一个二进制的动态头部，在该头部数据中存储字符串相关信息：
+///
+/// +----------+-------------+--------------+
+/// | 动态头部 | 类 C 字符串 | 非法内存地址 |
+/// +----------+-------------+--------------+
+///            |
+///            `-> 返回给用户的字符串指针
+///
+/// 根据字符串长度不同，SDS 使用不同的二进制头部。当字符串长度小于 32（2^5）时使用 sdshdr5，当字符串长度较大时分别使用 sdshdr8、sdshdr16、sdshdr32、sdshdr64 等。
+
 #ifndef __SDS_H
 #define __SDS_H
 
@@ -44,6 +60,7 @@ typedef char *sds;
 
 /* Note: sdshdr5 is never used, we just access the flags byte directly.
  * However is here to document the layout of type 5 SDS strings. */
+/// sdshdr* 系列数据结构是根据头部中存储字符串长度空间大小进行命名。sdshdr5 是一个比较特殊的数据结构，它只有 flags 字段，因此使用时仅需直接读写 flags。sdshdr5 在 flags 的低三位存储 SDS_TYPE_5，在 flags 的高五位存储字符串长度。其他 sdshdr 数据结构则使用 len 字段存储存储字符串的长度，并在 alloc 字段记录字符串的总可用空间大小。
 struct __attribute__ ((__packed__)) sdshdr5 {
     unsigned char flags; /* 3 lsb of type, and 5 msb of string length */
     char buf[];
